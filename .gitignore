@@ -14,6 +14,19 @@ build/
 venv/
 __pycache__/
 *.pyc
+*.pyo
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+geoledger.db
+
+# Uploads & Temporary files
+uploads/
+*.txt
+implementation_plan.md
+walkthrough.md
 
 # Logs
 *.log

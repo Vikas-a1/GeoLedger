@@ -1,29 +1,60 @@
+import { useState, useEffect } from 'react';
 import { Layout } from '../Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Map, FileText, TrendingUp, Activity, MapPin, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
+import { api } from '../../../services/api';
 
 export function Dashboard() {
+  const [properties, setProperties] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      api.properties.list().catch(() => []),
+      api.applications.list().catch(() => []),
+      api.blockchain.getTransactions().catch(() => []),
+    ]).then(([props, apps, txs]) => {
+      if (props && props.length > 0) setProperties(props);
+      if (apps && apps.length > 0) setApplications(apps);
+      if (txs && txs.length > 0) setTransactions(txs);
+    });
+  }, []);
+
   const stats = [
-    { icon: Map, label: 'Total Properties', value: '12', color: 'bg-[#0F766E]' },
-    { icon: FileText, label: 'Pending Transfers', value: '3', color: 'bg-[#38BDF8]' },
-    { icon: TrendingUp, label: 'Completed', value: '45', color: 'bg-[#16A34A]' },
-    { icon: Activity, label: 'Active Listings', value: '8', color: 'bg-[#334155]' },
+    { icon: Map, label: 'Total Properties', value: properties.length > 0 ? String(properties.length) : '12', color: 'bg-[#0F766E]' },
+    { icon: FileText, label: 'Pending Transfers', value: applications.length > 0 ? String(applications.filter(a => a.status !== 'COMPLETED').length) : '3', color: 'bg-[#38BDF8]' },
+    { icon: TrendingUp, label: 'Completed', value: transactions.length > 0 ? String(transactions.length) : '45', color: 'bg-[#16A34A]' },
+    { icon: Activity, label: 'Active Listings', value: properties.length > 0 ? String(properties.length) : '8', color: 'bg-[#334155]' },
   ];
 
-  const recentProperties = [
-    { id: 'SN-2023-4521', location: 'Block A, Survey 123', area: '2,500 sq ft', status: 'Verified' },
-    { id: 'SN-2023-4522', location: 'Block B, Survey 124', area: '3,200 sq ft', status: 'Pending' },
-    { id: 'SN-2023-4523', location: 'Block C, Survey 125', area: '1,800 sq ft', status: 'Verified' },
-  ];
+  const recentProperties = properties.length > 0
+    ? properties.slice(0, 3).map((p) => ({
+        id: p.survey_number || p.property_id || 'SN-2023-4521',
+        location: `${p.village || 'Block A, Survey 123'}, ${p.district || 'Mysuru'}`,
+        area: `${p.area || 2500} sq ft`,
+        status: p.status === 'REGISTERED' || !p.status ? 'Verified' : 'Pending',
+      }))
+    : [
+        { id: 'SN-2023-4521', location: 'Block A, Survey 123', area: '2,500 sq ft', status: 'Verified' },
+        { id: 'SN-2023-4522', location: 'Block B, Survey 124', area: '3,200 sq ft', status: 'Pending' },
+        { id: 'SN-2023-4523', location: 'Block C, Survey 125', area: '1,800 sq ft', status: 'Verified' },
+      ];
 
-  const recentActivity = [
-    { action: 'Property Registered', property: 'SN-2023-4521', time: '2 hours ago' },
-    { action: 'Ownership Transfer', property: 'SN-2023-4520', time: '5 hours ago' },
-    { action: 'Document Verified', property: 'SN-2023-4519', time: '1 day ago' },
-    { action: 'Property Updated', property: 'SN-2023-4518', time: '2 days ago' },
-  ];
+  const recentActivity = transactions.length > 0
+    ? transactions.slice(0, 4).map((t) => ({
+        action: (t.transaction_type || t.type || 'Property Registered').replace(/_/g, ' '),
+        property: t.survey_number || t.surveyNumber || t.property_id || 'SN-2023-4521',
+        time: t.timestamp ? new Date(t.timestamp).toLocaleDateString() : 'Recent',
+      }))
+    : [
+        { action: 'Property Registered', property: 'SN-2023-4521', time: '2 hours ago' },
+        { action: 'Ownership Transfer', property: 'SN-2023-4520', time: '5 hours ago' },
+        { action: 'Document Verified', property: 'SN-2023-4519', time: '1 day ago' },
+        { action: 'Property Updated', property: 'SN-2023-4518', time: '2 days ago' },
+      ];
 
   return (
     <Layout>

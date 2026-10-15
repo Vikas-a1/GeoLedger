@@ -1,0 +1,42 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_20-3c1e42d73b62f40ccb7b451080fc756e509c156d",
+  "solcVersion": "0.8.20",
+  "solcLongVersion": "0.8.20+commit.a1b79de6",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/GeoLedger.sol": "project/contracts/GeoLedger.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/GeoLedger.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\ncontract GeoLedger {\r\n\r\n    struct Property {\r\n        string propertyId;\r\n        address owner;\r\n        uint256 registeredAt;\r\n        bool exists;\r\n    }\r\n\r\n    mapping(string => Property) private properties;\r\n    address public registrar;\r\n\r\n    constructor() {\r\n        registrar = msg.sender;\r\n    }\r\n\r\n    event PropertyRegistered(\r\n        string indexed propertyId,\r\n        address indexed owner,\r\n        uint256 timestamp\r\n    );\r\n\r\n    event OwnershipTransferred(\r\n        string indexed propertyId,\r\n        address indexed previousOwner,\r\n        address indexed newOwner,\r\n        uint256 timestamp\r\n    );\r\n\r\n    function registerProperty(\r\n        string calldata propertyId,\r\n        address owner\r\n    ) external {\r\n\r\n        require(\r\n            bytes(propertyId).length > 0,\r\n            \"Property ID required\"\r\n        );\r\n\r\n        require(\r\n            owner != address(0),\r\n            \"Invalid owner address\"\r\n        );\r\n\r\n        require(\r\n            !properties[propertyId].exists,\r\n            \"Property already registered\"\r\n        );\r\n\r\n        properties[propertyId] = Property({\r\n            propertyId: propertyId,\r\n            owner: owner,\r\n            registeredAt: block.timestamp,\r\n            exists: true\r\n        });\r\n\r\n        emit PropertyRegistered(\r\n            propertyId,\r\n            owner,\r\n            block.timestamp\r\n        );\r\n    }\r\n\r\n    function transferOwnership(\r\n        string calldata propertyId,\r\n        address newOwner\r\n    ) external {\r\n\r\n        require(\r\n            properties[propertyId].exists,\r\n            \"Property does not exist\"\r\n        );\r\n\r\n        require(\r\n            msg.sender == properties[propertyId].owner || msg.sender == registrar,\r\n            \"Only current owner or authorized registrar can transfer ownership\"\r\n        );\r\n\r\n        require(\r\n            newOwner != address(0),\r\n            \"Invalid new owner\"\r\n        );\r\n\r\n        address previousOwner =\r\n            properties[propertyId].owner;\r\n\r\n        properties[propertyId].owner = newOwner;\r\n\r\n        emit OwnershipTransferred(\r\n            propertyId,\r\n            previousOwner,\r\n            newOwner,\r\n            block.timestamp\r\n        );\r\n    }\r\n\r\n    function getProperty(\r\n        string calldata propertyId\r\n    )\r\n        external\r\n        view\r\n        returns (\r\n            string memory,\r\n            address,\r\n            uint256,\r\n            bool\r\n        )\r\n    {\r\n        Property memory property =\r\n            properties[propertyId];\r\n\r\n        return (\r\n            property.propertyId,\r\n            property.owner,\r\n            property.registeredAt,\r\n            property.exists\r\n        );\r\n    }\r\n}"
+      }
+    }
+  }
+}

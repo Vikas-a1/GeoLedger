@@ -1,0 +1,85 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "survey_number": "SN-DEMO-001",
+        "property_id": "GL-PROP-001",
+        "locality": "Thandavapura, Nanjangud",
+        "district": "Mysuru",
+        "state": "Karnataka",
+        "area_sqft": 2500,
+        "land_type": "Residential",
+        "owner_wallet": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              76.6852,
+              12.1812
+            ],
+            [
+              76.6865,
+              12.1812
+            ],
+            [
+              76.6865,
+              12.1801
+            ],
+            [
+              76.6852,
+              12.1801
+            ],
+            [
+              76.6852,
+              12.1812
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "survey_number": "SN-2023-4521",
+        "property_id": "GL-PROP-4521",
+        "locality": "Thandavapura Sector 1",
+        "district": "Mysuru",
+        "state": "Karnataka",
+        "area_sqft": 3200,
+        "land_type": "Commercial",
+        "owner_wallet": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              76.687,
+              12.182
+            ],
+            [
+              76.6885,
+              12.182
+            ],
+            [
+              76.6885,
+              12.1808
+            ],
+            [
+              76.687,
+              12.1808
+            ],
+            [
+              76.687,
+              12.182
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

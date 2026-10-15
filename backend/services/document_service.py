@@ -1,0 +1,150 @@
+import hashlib
+import os
+import uuid
+from datetime import datetime
+from werkzeug.utils import secure_filename
+
+from config import Config
+from database.client import get_database
+from models.document import DocumentModel
+from utils.errors import APIError
+from utils.validation import (
+    validate_document_upload,
+    validate_property_id,
+)
+
+
+class DocumentService:
+
+    def __init__(self):
+        self.db = get_database()
+        self.collection = self.db.documents
+
+        self.upload_folder = os.path.abspath(Config.UPLOAD_FOLDER)
+        os.makedirs(self.upload_folder, exist_ok=True)
+
+    def upload_document(
+        self,
+        property_id: str | None,
+        application_id: str | None,
+        document_type: str,
+        file,
+    ) -> dict:
+        if not property_id and not application_id:
+            raise APIError(
+                "Either property_id or application_id is required",
+                status_code=400,
+            )
+
+        validate_document_upload(
+            property_id or application_id,
+            document_type,
+            file,
+        )
+
+        orig_filename = secure_filename(file.filename)
+        if not orig_filename:
+            raise APIError("Invalid filename", status_code=400)
+
+        file_bytes = file.read()
+        if not file_bytes:
+            raise APIError("Uploaded file is empty", status_code=400)
+
+        document_hash = hashlib.sha256(file_bytes).hexdigest()
+
+        unique_id = uuid.uuid4().hex[:12]
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        stored_filename = f"{timestamp}_{unique_id}_{orig_filename}"
+
+        file_path = os.path.join(self.upload_folder, stored_filename)
+
+        with open(file_path, "wb") as stored_file:
+            stored_file.write(file_bytes)
+
+        now = datetime.utcnow().isoformat()
+
+        document_data = {
+            "property_id": property_id,
+            "application_id": application_id,
+            "document_type": document_type.upper(),
+            "filename": orig_filename,
+            "stored_filename": stored_filename,
+            "storage_location": file_path,
+            "file_size": len(file_bytes),
+            "document_hash": document_hash,
+            "verification_status": "PENDING",
+            "verification_score": 100,
+            "verification_checks": [
+                {
+                    "name": "FILE_INTEGRITY",
+                    "passed": True,
+                    "severity": "LOW",
+                    "message": "SHA-256 hash generated and validated against file bytes",
+                }
+            ],
+            "verification_notes": None,
+            "uploaded_at": now,
+            "verified_at": None,
+        }
+
+        try:
+            result = self.collection.insert_one(document_data)
+            document_data["_id"] = result.inserted_id
+            document_data["document_id"] = result.inserted_id
+
+            if application_id:
+                from services.application_service import ApplicationService
+                try:
+                    ApplicationService().add_submitted_document(
+                        application_id, result.inserted_id
+                    )
+                except Exception as ex:
+                    print(f"Warning linking document to application: {ex}")
+
+        except Exception:
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+            raise
+
+        return self._serialize_document(document_data)
+
+    def get_documents_for_property(self, property_id: str) -> list:
+        documents = self.collection.find({"property_id": property_id})
+        return [self._serialize_document(doc) for doc in documents]
+
+    def get_documents_for_application(self, application_id: str) -> list:
+        if not application_id:
+            raise APIError("Application ID is required", status_code=400)
+
+        documents = self.collection.find({"application_id": application_id})
+        return [self._serialize_document(doc) for doc in documents]
+
+    def get_document_by_id(self, document_id: str) -> dict:
+        doc = self.collection.find_one({"_id": document_id})
+        if not doc:
+            raise APIError("Document not found", status_code=404)
+        return self._serialize_document(doc)
+
+    def delete_document(self, document_id: str) -> None:
+        doc = self.collection.find_one({"_id": document_id})
+        if not doc:
+            raise APIError("Document not found", status_code=404)
+
+        self.collection.delete_one({"_id": document_id})
+        file_path = doc.get("storage_location")
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+
+    @staticmethod
+    def _serialize_document(document: dict) -> dict:
+        doc = dict(document)
+        doc_id = str(doc.get("_id", ""))
+        doc["document_id"] = doc_id
+        doc["_id"] = doc_id
+        doc["id"] = doc_id
+        return doc

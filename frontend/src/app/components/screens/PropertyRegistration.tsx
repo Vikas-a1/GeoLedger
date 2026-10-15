@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -6,9 +7,69 @@ import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { api } from '../../../services/api';
 
 export function PropertyRegistration() {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    surveyNumber: 'SN-2023-4521',
+    propertyId: '',
+    location: 'Block A, Survey 123, District North',
+    area: '2500',
+    district: 'Mysuru',
+    latitude: '12.1812',
+    longitude: '76.6852',
+    ownerName: 'John Doe',
+    governmentId: 'AADHAAR-8921-4821',
+    contactNumber: '+91 98765 43210',
+    email: 'john.doe@example.com',
+    walletAddress: '0x7a3f9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a',
+    residentialAddress: 'House 42, 3rd Cross, Bengaluru',
+  });
+
+  const [files, setFiles] = useState<{ [key: string]: File }>({});
+
+  const updateField = (field: string, val: string) => {
+    setFormData((prev) => ({ ...prev, [field]: val }));
+  };
+
+  const handleFileUpload = (docName: string, file: File) => {
+    setFiles((prev) => ({ ...prev, [docName]: file }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setSubmitting(true);
+      const app = await api.applications.create({
+        survey_number: formData.surveyNumber,
+        application_type: 'NEW_REGISTRATION',
+        applicant_name: formData.ownerName,
+        applicant_id: formData.governmentId,
+        wallet_address: formData.walletAddress,
+        property_details: {
+          area: Number(formData.area) || 2500,
+          location: formData.location,
+          village: formData.location.split(',')[0] || 'Thandavapura',
+          district: formData.district,
+          taluk: 'Nanjangud',
+          coordinates: { lat: formData.latitude, lon: formData.longitude },
+        },
+      });
+
+      const appId = app._id || app.application_id || app.id;
+      for (const [docName, file] of Object.entries(files)) {
+        await api.documents.upload(appId, file, docName).catch(() => {});
+      }
+      navigate(`/applications/${appId}`);
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err.message || 'Submission failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const steps = [
     { id: 1, title: 'Property Details', completed: false },
@@ -93,38 +154,81 @@ export function PropertyRegistration() {
                     <div className="grid sm:grid-cols-2 gap-6">
                       <div>
                         <Label htmlFor="survey-number">Survey Number *</Label>
-                        <Input id="survey-number" placeholder="e.g., SN-2023-4521" className="mt-2 border-[#E2E8F0]" />
+                        <Input
+                          id="survey-number"
+                          placeholder="e.g., SN-2023-4521"
+                          className="mt-2 border-[#E2E8F0]"
+                          value={formData.surveyNumber}
+                          onChange={(e) => updateField('surveyNumber', e.target.value)}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="property-id">Property ID</Label>
-                        <Input id="property-id" placeholder="Auto-generated" disabled className="mt-2 bg-[#F8FAFC]" />
+                        <Input
+                          id="property-id"
+                          placeholder={formData.surveyNumber ? `GL-${formData.surveyNumber}` : 'Auto-generated'}
+                          disabled
+                          className="mt-2 bg-[#F8FAFC]"
+                        />
                       </div>
                     </div>
 
                     <div>
                       <Label htmlFor="location">Location / Address *</Label>
-                      <Textarea id="location" placeholder="Enter full address with district and block details" className="mt-2 border-[#E2E8F0]" rows={3} />
+                      <Textarea
+                        id="location"
+                        placeholder="Enter full address with district and block details"
+                        className="mt-2 border-[#E2E8F0]"
+                        rows={3}
+                        value={formData.location}
+                        onChange={(e) => updateField('location', e.target.value)}
+                      />
                     </div>
 
                     <div className="grid sm:grid-cols-2 gap-6">
                       <div>
                         <Label htmlFor="area">Total Area (sq ft) *</Label>
-                        <Input id="area" type="number" placeholder="e.g., 2500" className="mt-2 border-[#E2E8F0]" />
+                        <Input
+                          id="area"
+                          type="number"
+                          placeholder="e.g., 2500"
+                          className="mt-2 border-[#E2E8F0]"
+                          value={formData.area}
+                          onChange={(e) => updateField('area', e.target.value)}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="district">District *</Label>
-                        <Input id="district" placeholder="e.g., North District" className="mt-2 border-[#E2E8F0]" />
+                        <Input
+                          id="district"
+                          placeholder="e.g., North District"
+                          className="mt-2 border-[#E2E8F0]"
+                          value={formData.district}
+                          onChange={(e) => updateField('district', e.target.value)}
+                        />
                       </div>
                     </div>
 
                     <div className="grid sm:grid-cols-2 gap-6">
                       <div>
                         <Label htmlFor="latitude">Latitude *</Label>
-                        <Input id="latitude" placeholder="e.g., 28.7041" className="mt-2 border-[#E2E8F0]" />
+                        <Input
+                          id="latitude"
+                          placeholder="e.g., 28.7041"
+                          className="mt-2 border-[#E2E8F0]"
+                          value={formData.latitude}
+                          onChange={(e) => updateField('latitude', e.target.value)}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="longitude">Longitude *</Label>
-                        <Input id="longitude" placeholder="e.g., 77.1025" className="mt-2 border-[#E2E8F0]" />
+                        <Input
+                          id="longitude"
+                          placeholder="e.g., 77.1025"
+                          className="mt-2 border-[#E2E8F0]"
+                          value={formData.longitude}
+                          onChange={(e) => updateField('longitude', e.target.value)}
+                        />
                       </div>
                     </div>
                   </div>
@@ -135,34 +239,73 @@ export function PropertyRegistration() {
                   <div className="space-y-6">
                     <div>
                       <Label htmlFor="owner-name">Owner Full Name *</Label>
-                      <Input id="owner-name" placeholder="Enter full legal name" className="mt-2 border-[#E2E8F0]" />
+                      <Input
+                        id="owner-name"
+                        placeholder="Enter full legal name"
+                        className="mt-2 border-[#E2E8F0]"
+                        value={formData.ownerName}
+                        onChange={(e) => updateField('ownerName', e.target.value)}
+                      />
                     </div>
 
                     <div className="grid sm:grid-cols-2 gap-6">
                       <div>
                         <Label htmlFor="owner-id">Government ID *</Label>
-                        <Input id="owner-id" placeholder="Aadhaar / Passport / License" className="mt-2 border-[#E2E8F0]" />
+                        <Input
+                          id="owner-id"
+                          placeholder="Aadhaar / Passport / License"
+                          className="mt-2 border-[#E2E8F0]"
+                          value={formData.governmentId}
+                          onChange={(e) => updateField('governmentId', e.target.value)}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="owner-phone">Contact Number *</Label>
-                        <Input id="owner-phone" type="tel" placeholder="+91 XXXXX XXXXX" className="mt-2 border-[#E2E8F0]" />
+                        <Input
+                          id="owner-phone"
+                          type="tel"
+                          placeholder="+91 XXXXX XXXXX"
+                          className="mt-2 border-[#E2E8F0]"
+                          value={formData.contactNumber}
+                          onChange={(e) => updateField('contactNumber', e.target.value)}
+                        />
                       </div>
                     </div>
 
                     <div>
                       <Label htmlFor="owner-email">Email Address *</Label>
-                      <Input id="owner-email" type="email" placeholder="owner@example.com" className="mt-2 border-[#E2E8F0]" />
+                      <Input
+                        id="owner-email"
+                        type="email"
+                        placeholder="owner@example.com"
+                        className="mt-2 border-[#E2E8F0]"
+                        value={formData.email}
+                        onChange={(e) => updateField('email', e.target.value)}
+                      />
                     </div>
 
                     <div>
                       <Label htmlFor="wallet-address">Wallet Address *</Label>
-                      <Input id="wallet-address" placeholder="0x..." className="mt-2 border-[#E2E8F0] font-mono text-sm" />
+                      <Input
+                        id="wallet-address"
+                        placeholder="0x..."
+                        className="mt-2 border-[#E2E8F0] font-mono text-sm"
+                        value={formData.walletAddress}
+                        onChange={(e) => updateField('walletAddress', e.target.value)}
+                      />
                       <p className="text-xs text-[#64748B] mt-2">This will be the blockchain address for property ownership</p>
                     </div>
 
                     <div>
                       <Label htmlFor="owner-address">Residential Address *</Label>
-                      <Textarea id="owner-address" placeholder="Enter complete residential address" className="mt-2 border-[#E2E8F0]" rows={3} />
+                      <Textarea
+                        id="owner-address"
+                        placeholder="Enter complete residential address"
+                        className="mt-2 border-[#E2E8F0]"
+                        rows={3}
+                        value={formData.residentialAddress}
+                        onChange={(e) => updateField('residentialAddress', e.target.value)}
+                      />
                     </div>
                   </div>
                 )}
@@ -182,12 +325,33 @@ export function PropertyRegistration() {
                               )}
                             </div>
                           </div>
+                          {files[doc.name] && (
+                            <span className="text-xs text-[#16A34A] font-medium flex items-center gap-1">
+                              <CheckCircle2 className="w-4 h-4" />
+                              {files[doc.name].name}
+                            </span>
+                          )}
                         </div>
-                        <div className="border-2 border-dashed border-[#E2E8F0] rounded-lg p-6 text-center hover:border-[#0F766E] transition-colors cursor-pointer">
+                        <label
+                          htmlFor={`doc-input-${index}`}
+                          className="border-2 border-dashed border-[#E2E8F0] rounded-lg p-6 text-center hover:border-[#0F766E] transition-colors cursor-pointer block"
+                        >
+                          <input
+                            type="file"
+                            id={`doc-input-${index}`}
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleFileUpload(doc.name, e.target.files[0]);
+                              }
+                            }}
+                          />
                           <Upload className="w-8 h-8 text-[#64748B] mx-auto mb-2" />
-                          <p className="text-sm text-[#0F172A] mb-1">Click to upload or drag and drop</p>
+                          <p className="text-sm text-[#0F172A] mb-1">
+                            {files[doc.name] ? files[doc.name].name : 'Click to upload or drag and drop'}
+                          </p>
                           <p className="text-xs text-[#64748B]">PDF, JPEG, PNG (max 10MB)</p>
-                        </div>
+                        </label>
                       </div>
                     ))}
                   </div>
@@ -201,15 +365,15 @@ export function PropertyRegistration() {
                       <dl className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <dt className="text-[#64748B]">Survey Number:</dt>
-                          <dd className="text-[#0F172A] font-medium">SN-2023-4521</dd>
+                          <dd className="text-[#0F172A] font-medium">{formData.surveyNumber}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-[#64748B]">Location:</dt>
-                          <dd className="text-[#0F172A] font-medium">Block A, District North</dd>
+                          <dd className="text-[#0F172A] font-medium">{formData.location}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-[#64748B]">Area:</dt>
-                          <dd className="text-[#0F172A] font-medium">2,500 sq ft</dd>
+                          <dd className="text-[#0F172A] font-medium">{formData.area} sq ft</dd>
                         </div>
                       </dl>
                     </div>
@@ -219,15 +383,15 @@ export function PropertyRegistration() {
                       <dl className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <dt className="text-[#64748B]">Name:</dt>
-                          <dd className="text-[#0F172A] font-medium">John Doe</dd>
+                          <dd className="text-[#0F172A] font-medium">{formData.ownerName}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-[#64748B]">Wallet:</dt>
-                          <dd className="text-[#0F172A] font-mono text-xs">0x7a3f...9b2c</dd>
+                          <dd className="text-[#0F172A] font-mono text-xs">{formData.walletAddress}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-[#64748B]">Contact:</dt>
-                          <dd className="text-[#0F172A] font-medium">+91 98765 43210</dd>
+                          <dd className="text-[#0F172A] font-medium">{formData.contactNumber}</dd>
                         </div>
                       </dl>
                     </div>
@@ -263,8 +427,12 @@ export function PropertyRegistration() {
                       Continue
                     </Button>
                   ) : (
-                    <Button className="bg-[#0F766E] hover:bg-[#0F766E]/90 sm:ml-auto">
-                      Submit Registration
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                      className="bg-[#0F766E] hover:bg-[#0F766E]/90 sm:ml-auto"
+                    >
+                      {submitting ? 'Submitting Application...' : 'Submit Registration'}
                     </Button>
                   )}
                 </div>
