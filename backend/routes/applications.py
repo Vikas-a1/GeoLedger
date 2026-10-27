@@ -37,7 +37,10 @@ def list_applications():
 
     applications = (
         get_application_service()
-        .list_applications()
+        .list_applications(
+            applicant_wallet=request.args.get("applicant_wallet"),
+            status=request.args.get("status"),
+        )
     )
 
     return success_response(
