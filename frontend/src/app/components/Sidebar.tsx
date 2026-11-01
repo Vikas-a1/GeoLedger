@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
   Building2,
@@ -10,7 +10,10 @@ import {
   Map,
   Bell,
   User,
+  LogOut,
 } from 'lucide-react';
+import { useWallet } from '../context/WalletContext';
+import { shortenAddress } from '../../services/wallet';
 
 const navItems = [
   { icon: Home, label: 'Dashboard', path: '/dashboard' },
@@ -27,6 +30,8 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { address, disconnect, chainName, isLocalNetwork } = useWallet();
 
   const isItemActive = (path: string) => {
     if (path === '/dashboard') return location.pathname === '/dashboard';
@@ -72,16 +77,29 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-[#334155]">
-        <div className="flex items-center gap-3 px-4 py-3">
+      <div className="p-4 border-t border-[#334155] space-y-2">
+        <Link to="/profile" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#334155]">
           <div className="w-10 h-10 bg-[#334155] rounded-full flex items-center justify-center">
             <User className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-sm font-medium">User Account</p>
-            <p className="text-xs text-[#64748B]">0x7a3f...9b2c</p>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{address ? shortenAddress(address) : 'Not connected'}</p>
+            <p className={`text-xs truncate ${isLocalNetwork ? 'text-[#5EEAD4]' : 'text-[#FBBF24]'}`}>
+              {chainName}
+            </p>
           </div>
-        </div>
+        </Link>
+        <button
+          type="button"
+          onClick={async () => {
+            await disconnect();
+            navigate('/login');
+          }}
+          className="flex w-full items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-[#E2E8F0] hover:bg-[#334155]"
+        >
+          <LogOut className="w-4 h-4" />
+          Disconnect
+        </button>
       </div>
     </aside>
   );

@@ -1,11 +1,16 @@
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { User, Wallet, Mail, Phone, MapPin, Shield } from 'lucide-react';
+import { useWallet } from '../../context/WalletContext';
+import { shortenAddress } from '../../../services/wallet';
 
 export function Profile() {
+  const navigate = useNavigate();
+  const { address, chainName, balanceEth, isLocalNetwork, isConnected, disconnect, switchToLocal } = useWallet();
   return (
     <Layout>
       <div className="p-4 lg:p-8">
@@ -92,11 +97,22 @@ export function Profile() {
                   <div className="w-12 h-12 bg-[#0F766E] rounded-full flex items-center justify-center">
                     <Wallet className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm text-[#64748B] mb-1">Connected Wallet</p>
-                    <p className="font-mono text-sm text-[#0F172A]">0x7a3f9b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a</p>
+                    <p className="font-mono text-sm text-[#0F172A] break-all">{address || 'Not connected'}</p>
+                    {address && (
+                      <p className="text-xs text-[#64748B] mt-1">{shortenAddress(address)}</p>
+                    )}
                   </div>
-                  <Button variant="outline" size="sm" className="border-[#E2E8F0]">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-[#E2E8F0]"
+                    onClick={async () => {
+                      await disconnect();
+                      navigate('/');
+                    }}
+                  >
                     Disconnect
                   </Button>
                 </div>
@@ -104,11 +120,21 @@ export function Profile() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="bg-[#F8FAFC] rounded-lg p-4">
                     <p className="text-sm text-[#64748B] mb-1">Network</p>
-                    <p className="font-medium text-[#0F172A]">Ethereum Mainnet</p>
+                    <p className="font-medium text-[#0F172A]">{chainName}</p>
+                    {!isLocalNetwork && isConnected && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 border-[#E2E8F0]"
+                        onClick={() => void switchToLocal()}
+                      >
+                        Switch to Hardhat
+                      </Button>
+                    )}
                   </div>
                   <div className="bg-[#F8FAFC] rounded-lg p-4">
                     <p className="text-sm text-[#64748B] mb-1">Balance</p>
-                    <p className="font-medium text-[#0F172A]">2.45 ETH</p>
+                    <p className="font-medium text-[#0F172A]">{balanceEth != null ? `${balanceEth} ETH` : '—'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -141,7 +167,9 @@ export function Profile() {
                     <Wallet className="w-5 h-5 text-[#0F766E]" />
                     <span className="text-sm text-[#64748B]">Wallet Status</span>
                   </div>
-                  <span className="text-sm font-medium text-[#16A34A]">Connected</span>
+                  <span className={`text-sm font-medium ${isConnected ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+                    {isConnected ? 'Connected' : 'Disconnected'}
+                  </span>
                 </div>
               </CardContent>
             </Card>

@@ -8,8 +8,10 @@ import { Label } from '../ui/label';
 import { ArrowRight, CheckCircle2, Clock, FileCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { api } from '../../../services/api';
+import { useWallet } from '../../context/WalletContext';
 
 export function PropertyTransfer() {
+  const { address } = useWallet();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -21,11 +23,11 @@ export function PropertyTransfer() {
     area: '2,500 sq ft',
     registrationDate: 'March 15, 2023',
     ownerName: 'John Doe',
-    ownerWallet: '0x7a3f...9b2c',
+    ownerWallet: address || '',
   });
 
-  const [newOwnerName, setNewOwnerName] = useState('Alice Smith');
-  const [newWallet, setNewWallet] = useState('0x8b4c1a3d5e7f9a2b4c6d8e0f1a3b5c7d9e1f3a5b');
+  const [newOwnerName, setNewOwnerName] = useState('');
+  const [newWallet, setNewWallet] = useState('');
   const [saleValue, setSaleValue] = useState('1500000');
   const [transferReason, setTransferReason] = useState('Sale of Property');
 
@@ -41,7 +43,7 @@ export function PropertyTransfer() {
             area: `${p.area || 2500} sq ft`,
             registrationDate: 'March 15, 2023',
             ownerName: 'Current Legal Owner',
-            ownerWallet: p.owner_wallet || '0x7a3f...9b2c',
+            ownerWallet: p.owner_wallet || address || '',
           });
         }
       }).catch(() => {});
@@ -51,10 +53,17 @@ export function PropertyTransfer() {
   const handleExecuteTransfer = async () => {
     try {
       setLoading(true);
+      if (!newWallet) {
+        throw new Error('Enter the buyer wallet address.');
+      }
       const res = await api.ownership.transfer({
         survey_number: property.surveyNumber,
-        new_owner_wallet: newWallet,
-        new_owner_name: newOwnerName,
+        seller_wallet: address || property.ownerWallet,
+        current_owner: address || property.ownerWallet,
+        applicant_wallet: address || property.ownerWallet,
+        buyer_wallet: newWallet,
+        new_owner: newWallet,
+        buyer_name: newOwnerName,
         consideration_amount: Number(saleValue) || 0,
         reason: transferReason,
       });

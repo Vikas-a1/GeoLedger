@@ -2,8 +2,11 @@ import { Link } from 'react-router-dom';
 import { Map, Shield, Globe, Lock, FileCheck, Users } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { useWallet } from '../../context/WalletContext';
+import { shortenAddress } from '../../../services/wallet';
 
 export function Landing() {
+  const { isConnected, address } = useWallet();
   const features = [
     {
       icon: Shield,
@@ -49,8 +52,10 @@ export function Landing() {
               </div>
               <span className="font-semibold text-[#0F172A]">GeoLedger</span>
             </div>
-            <Link to="/login">
-              <Button className="bg-[#0F766E] hover:bg-[#0F766E]/90">Connect Wallet</Button>
+            <Link to={isConnected ? '/dashboard' : '/login'}>
+              <Button className="bg-[#0F766E] hover:bg-[#0F766E]/90">
+                {isConnected && address ? shortenAddress(address) : 'Connect MetaMask'}
+              </Button>
             </Link>
           </div>
         </div>
@@ -68,9 +73,9 @@ export function Landing() {
               to create a transparent, tamper-proof land registry system for modern governance.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/login">
+              <Link to={isConnected ? '/dashboard' : '/login'}>
                 <Button size="lg" className="bg-[#0F766E] hover:bg-[#0F766E]/90 w-full sm:w-auto">
-                  Get Started
+                  {isConnected ? 'Open Dashboard' : 'Connect MetaMask'}
                 </Button>
               </Link>
               <Link to="/search">

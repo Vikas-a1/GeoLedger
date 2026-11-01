@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -8,9 +8,11 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { api } from '../../../services/api';
+import { useWallet } from '../../context/WalletContext';
 
 export function PropertyRegistration() {
   const navigate = useNavigate();
+  const { address } = useWallet();
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
@@ -26,9 +28,15 @@ export function PropertyRegistration() {
     governmentId: 'AADHAAR-8921-4821',
     contactNumber: '+91 98765 43210',
     email: 'john.doe@example.com',
-    walletAddress: '0x7a3f9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a',
+    walletAddress: address || '',
     residentialAddress: 'House 42, 3rd Cross, Bengaluru',
   });
+
+  useEffect(() => {
+    if (address) {
+      setFormData((prev) => ({ ...prev, walletAddress: address }));
+    }
+  }, [address]);
 
   const [files, setFiles] = useState<{ [key: string]: File }>({});
 
@@ -48,7 +56,8 @@ export function PropertyRegistration() {
         application_type: 'NEW_REGISTRATION',
         applicant_name: formData.ownerName,
         applicant_id: formData.governmentId,
-        wallet_address: formData.walletAddress,
+        applicant_wallet: address || formData.walletAddress,
+        wallet_address: address || formData.walletAddress,
         property_details: {
           area: Number(formData.area) || 2500,
           location: formData.location,
@@ -288,12 +297,12 @@ export function PropertyRegistration() {
                       <Label htmlFor="wallet-address">Wallet Address *</Label>
                       <Input
                         id="wallet-address"
-                        placeholder="0x..."
-                        className="mt-2 border-[#E2E8F0] font-mono text-sm"
+                        placeholder="Connect MetaMask"
+                        className="mt-2 border-[#E2E8F0] font-mono text-sm bg-[#F8FAFC]"
                         value={formData.walletAddress}
-                        onChange={(e) => updateField('walletAddress', e.target.value)}
+                        readOnly
                       />
-                      <p className="text-xs text-[#64748B] mt-2">This will be the blockchain address for property ownership</p>
+                      <p className="text-xs text-[#64748B] mt-2">Filled from your connected MetaMask account. This becomes the on-chain owner.</p>
                     </div>
 
                     <div>

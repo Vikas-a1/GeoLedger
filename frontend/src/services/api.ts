@@ -10,6 +10,20 @@ const client = axios.create({
 });
 
 export const api = {
+  auth: {
+    register: async (walletAddress: string) => {
+      try {
+        const res = await client.post('/auth/register', { wallet_address: walletAddress });
+        return res.data?.data;
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 409) return null;
+        console.warn('Wallet registration skipped', err);
+        return null;
+      }
+    },
+  },
+
   properties: {
     list: async () => {
       const res = await client.get('/properties');
